@@ -16,7 +16,7 @@ from anyblok.blok import BlokManager
 from anyblok.config import Configuration
 from anyblok.environment import EnvironmentManager
 from anyblok.registry import RegistryManager
-from . import add_complexe_model
+from . import add_complexe_model, add_simple_model
 
 logger = logging.getLogger(__name__)
 
@@ -112,5 +112,12 @@ def bloks_loaded(request, base_loaded):
 @pytest.fixture(scope="class")
 def registry_complexe_model(request, bloks_loaded):
     registry = init_registry(add_complexe_model)
+    request.addfinalizer(registry.close)
+    return registry
+
+
+@pytest.fixture(scope="class")
+def registry_simple_model(request, bloks_loaded):
+    registry = init_registry(add_simple_model)
     request.addfinalizer(registry.close)
     return registry
