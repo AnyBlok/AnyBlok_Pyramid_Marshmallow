@@ -98,30 +98,10 @@ def base_loaded(request):
 def bloks_loaded(request, base_loaded):
     request.addfinalizer(BlokManager.unload)
     BlokManager.load()
-
-
-# @pytest.fixture(scope="module")
-# def testbloks_loaded(request, base_loaded):
-#     request.addfinalizer(BlokManager.unload)
-#     BlokManager.load(entry_points=('bloks', 'test_bloks'))
 #
 #
 # @pytest.fixture(scope="class")
 # def registry_blok(request, bloks_loaded):
-#     registry = init_registry_with_bloks([], None)
-#     request.addfinalizer(registry.close)
-#     return registry
-#
-#
-# @pytest.fixture(scope="class")
-# def registry_testblok(request, testbloks_loaded):
-#     registry = init_registry_with_bloks([], None)
-#     request.addfinalizer(registry.close)
-#     return registry
-#
-#
-# @pytest.fixture(scope="function")
-# def registry_testblok_func(request, testbloks_loaded):
 #     registry = init_registry_with_bloks([], None)
 #     request.addfinalizer(registry.close)
 #     return registry
