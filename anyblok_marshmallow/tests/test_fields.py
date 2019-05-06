@@ -179,10 +179,8 @@ class TestFieldSelectionWithObject:
         with pytest.raises(ValidationError) as exception:
             exemple_schema.load(dump_data)
 
-        assert (
-            exception._excinfo[1].messages ==
-            {'name': ['Must be one of: foo, bar.']}
-        )
+        assert exception._excinfo[1].messages['name'][0].startswith(
+            'Must be one of: ')
 
     def test_validate_selection_with_object_ok(
         self, registry_field_selection_with_object
@@ -208,7 +206,7 @@ class TestFieldSelectionWithObject:
         exemple_schema = SchemaWrapper(
             registry=registry, context={'model': "Model.Exemple"})
         errors = exemple_schema.validate(dump_data)
-        assert errors == {'name': ['Must be one of: foo, bar.']}
+        assert errors['name'][0].startswith('Must be one of: ')
 
 
 def add_field_selection_with_classmethod():
@@ -281,10 +279,8 @@ class TestFieldSelectionWithClassmethod:
         with pytest.raises(ValidationError) as exception:
             exemple_schema.load(dump_data)
 
-        assert (
-            exception._excinfo[1].messages ==
-            {'name': ['Must be one of: foo, bar.']}
-        )
+        assert exception._excinfo[1].messages['name'][0].startswith(
+            'Must be one of: ')
 
     def test_validate_selection_with_classmethod_ok(
         self, registry_field_selection_with_clssmethod
@@ -310,7 +306,7 @@ class TestFieldSelectionWithClassmethod:
         exemple_schema = SchemaWrapper(
             registry=registry, context={'model': "Model.Exemple"})
         errors = exemple_schema.validate(dump_data)
-        assert errors == {'name': ['Must be one of: foo, bar.']}
+        assert errors['name'][0].startswith('Must be one of: ')
 
 
 def add_field_largebinary():
@@ -575,10 +571,8 @@ class TestFieldJsonCollectionProperty:
                 dump_data,
                 instances=dict(default=exemple)
             )
-        assert (
-            exception._excinfo[1].messages ==
-            {'name': ['Must be one of: foo, bar.']}
-        )
+        assert exception._excinfo[1].messages['name'][0].startswith(
+            'Must be one of: ')
 
     def test_load_json_collection_ko_no_instance(
         self, registry_field_json_collection_property
@@ -702,7 +696,7 @@ class TestFieldJsonCollectionProperty:
             dump_data,
             instances=dict(default=exemple)
         )
-        assert errors == {'name': ['Must be one of: foo, bar.']}
+        assert errors['name'][0].startswith('Must be one of: ')
 
     def test_validate_json_collection_ko_no_instance(
         self, registry_field_json_collection_property
@@ -893,13 +887,8 @@ class TestFieldJsonCollectionProperty2:
             },
             instances=dict(exemple1=exemple1, exemple2=exemple2)
         )
-        assert (
-            errors ==
-            {
-                'name1': ['Must be one of: foo1, bar1.'],
-                'name2': ['Must be one of: foo2, bar2.'],
-            }
-        )
+        assert errors['name1'][0].startswith('Must be one of: ')
+        assert errors['name2'][0].startswith('Must be one of: ')
 
 
 def add_field_email():
