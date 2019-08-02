@@ -359,7 +359,7 @@ class UniqueField(Field):
             if record:
                 raise ValidationError(
                         "Record with key %r = %r on %r already exists." %
-                            (self.key, value, Model))
+                        (self.key, value, Model))
 
 
 class Color(String):
