@@ -297,7 +297,7 @@ class InstanceField(Field):
                         (self.key, value, Model))
 
 
-class UniqueField(fields.Field):
+class UniqueField(Field):
 
     """Adds schema validation for ensuring uncity of a considered field on the
        considered model.
@@ -306,7 +306,7 @@ class UniqueField(fields.Field):
     :param key: The database column to query for `value`.
     """
 
-    def __init__(self, cls_or_instance_type=fields.Str, model=None,
+    def __init__(self, cls_or_instance_type=Str, model=None,
                  key=None, *args, **kwargs):
         self.model = model
         self.key = key
@@ -345,20 +345,21 @@ class UniqueField(fields.Field):
             raise ValidationError("Field may not be null.")
 
         if isinstance(self.container, List):
-            valid = Model.query(self.key).filter(
+            invalid = Model.query(self.key).filter(
                         getattr(Model, self.key).in_(
                             [v for v in value if v])).all()
-            valid_list = [v[0] for v in valid]
+            invalid_list = [v[0] for v in invalid]
 
-            if valid_list:
+            if invalid_list:
                 raise ValidationError(
                     "Records with key %r = %r on %r already exists." %
-                    (self.key, value, Model))
+                    (self.key, invalid_list, Model))
         else:
             record = Model.query().filter_by(**{self.key: value}).one_or_none()
             if record:
                 raise ValidationError(
                         "Record with key %r = %r on %r already exists." %
+                            (self.key, value, Model))
 
 
 class Color(String):
