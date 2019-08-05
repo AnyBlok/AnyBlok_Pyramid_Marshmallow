@@ -229,11 +229,13 @@ class Country(String):
         return
 
 
-class InstanceField(Field):
-    """Verify database record(s) exist for given model, column and value.
+class Mixin(Field):
 
-    :param str model: The database model to query
-    :param key: The database column to query for `value`.
+    """This field should not be instanciated and is aimed at being a support
+       base for high level fields wrapping simpler ones
+
+       :param str model: The database model to query
+       :param key: The database column to query for `value`.
     """
 
     def __init__(self, cls_or_instance_type=String, model=None,
@@ -254,10 +256,10 @@ class InstanceField(Field):
                                  'marshmallow.base.FieldABC')
             self.container = cls_or_instance_type
 
-        super(InstanceField, self).__init__(*args, **kwargs)
+        super(Mixin, self).__init__(*args, **kwargs)
 
     def _add_to_schema(self, field_name, schema):
-        super(InstanceField, self)._add_to_schema(field_name, schema)
+        super(Mixin, self)._add_to_schema(field_name, schema)
         self.container.parent = self
         self.container.name = field_name
 
@@ -266,6 +268,17 @@ class InstanceField(Field):
 
     def _deserialize(self, value, attr, data, **kwargs):
         return self.container.deserialize(value, attr=attr, data=data)
+
+    def _validate(self, value):
+        pass
+
+
+class InstanceField(Mixin):
+    """Verify database record(s) exist for given model, column and value.
+
+    :param str model: The database model to query
+    :param key: The database column to query for `value`.
+    """
 
     def _validate(self, value):
         registry = self.context['registry']
@@ -297,7 +310,7 @@ class InstanceField(Field):
                         (self.key, value, Model))
 
 
-class UniqueField(Field):
+class UniqueField(Mixin):
 
     """Adds schema validation for ensuring uncity of a considered field on the
        considered model.
@@ -305,37 +318,6 @@ class UniqueField(Field):
     :param str model: The database model to query
     :param key: The database column to query for `value`.
     """
-
-    def __init__(self, cls_or_instance_type=Str, model=None,
-                 key=None, *args, **kwargs):
-        self.model = model
-        self.key = key
-
-        if isinstance(cls_or_instance_type, type):
-            if not issubclass(cls_or_instance_type, FieldABC):
-                raise ValueError('The type of the list elements '
-                                 'must be a subclass of '
-                                 'marshmallow.base.FieldABC')
-            self.container = cls_or_instance_type()
-        else:
-            if not isinstance(cls_or_instance_type, FieldABC):
-                raise ValueError('The instances of the list '
-                                 'elements must be of type '
-                                 'marshmallow.base.FieldABC')
-            self.container = cls_or_instance_type
-
-        super(UniqueField, self).__init__(*args, **kwargs)
-
-    def _add_to_schema(self, field_name, schema):
-        super(UniqueField, self)._add_to_schema(field_name, schema)
-        self.container.parent = self
-        self.container.name = field_name
-
-    def _serialize(self, value, attr, obj):
-        return self.container._serialize(value, attr, obj)
-
-    def _deserialize(self, value, attr, data, **kwargs):
-        return self.container.deserialize(value, attr=attr, data=data)
 
     def _validate(self, value):
         registry = self.context['registry']
