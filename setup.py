@@ -38,7 +38,7 @@ with open(
 
 requirements = [
     'anyblok',
-    'marshmallow==3.0.0rc5',
+    'marshmallow==3.0.3',
     'marshmallow-sqlalchemy',
 ]
 
