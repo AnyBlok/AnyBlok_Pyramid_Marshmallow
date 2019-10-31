@@ -1320,6 +1320,332 @@ class TestFieldInstance:
         )
 
 
+def add_field_unique_with_object():
+
+    @Declarations.register(Declarations.Model)
+    class Records:
+        id = Integer(primary_key=True)
+        uuid = UUID(default=uuid1)
+        code = String()
+        number = Integer()
+        email = String(nullable=False, default="an.example@company.com")
+
+
+@pytest.fixture(scope="class")
+def registry_field_unique(request, bloks_loaded):
+    registry = init_registry(add_field_unique_with_object)
+    request.addfinalizer(registry.close)
+    return registry
+
+
+class TestUniqueField:
+
+    @pytest.fixture(autouse=True)
+    def transact(self, request, registry_field_unique):
+        transaction = registry_field_unique.begin_nested()
+        request.addfinalizer(transaction.rollback)
+
+    def test_unique_field_str(self, registry_field_unique):
+        registry = registry_field_unique
+        registry.Records.insert(code="code")
+
+        class TestSchema(Schema):
+            code = fields.UniqueField(
+                     cls_or_instance_type=fields.Str(),
+                     model='Model.Records', key='code')
+
+        sch = TestSchema(context={"registry": registry})
+
+        valid = sch.load(dict(code="new_code"))
+        assert valid == dict(code="new_code")
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code="code"))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'code')[0].startswith("Record with")
+        )
+        assert (
+            "'code'" in exception._excinfo[1].messages.get('code')[0]
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=666))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('code')[0] ==
+            "Not a valid string."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=uuid1()))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('code')[0] ==
+            "Not a valid string."
+        )
+
+    def test_unique_field_list_str(self, registry_field_unique):
+        registry = registry_field_unique
+        for i in range(2):
+            registry.Records.insert(code="code%s" % i, number=i)
+
+        class TestSchema(Schema):
+            code = fields.UniqueField(
+                        cls_or_instance_type=fields.List(fields.Str()),
+                        model='Model.Records', key='code')
+
+        sch = TestSchema(context={"registry": registry})
+
+        valid = sch.load(dict(code=["new_code"]))
+        assert valid == dict(code=["new_code"])
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=["code0"]))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'code')[0].startswith("Records with")
+        )
+        assert "'code0'" in exception._excinfo[1].messages.get('code')[0]
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=["code1"]))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'code')[0].startswith("Records with")
+        )
+        assert "'code1'" in exception._excinfo[1].messages.get('code')[0]
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=["code0", 666]))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('code').get(1)[0] ==
+            "Not a valid string."
+        )
+
+    def test_unique_field_other_types(self, registry_field_unique):
+        registry = registry_field_unique
+        record = registry.Records.insert(number=100)
+
+        class TestSchema(Schema):
+            uuid = fields.UniqueField(
+                     cls_or_instance_type=fields.UUID(),
+                     model='Model.Records', key='uuid')
+            number = fields.UniqueField(
+                     cls_or_instance_type=fields.Int(),
+                     model='Model.Records', key='number')
+
+        sch = TestSchema(context={"registry": registry})
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(uuid=record.uuid))
+
+        assert 'uuid' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'uuid')[0].startswith("Record with")
+        )
+        assert (
+            str(record.uuid) in
+            exception._excinfo[1].messages.get('uuid')[0]
+        )
+        assert (
+            "already exists." in exception._excinfo[1].messages.get(
+                'uuid')[0]
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(uuid=666))
+
+        assert 'uuid' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('uuid')[0] ==
+            "Not a valid UUID."
+        )
+
+        valid_number = sch.load(dict(number=record.number + 1))
+        assert valid_number == dict(number=record.number + 1)
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number="Nan"))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('number')[0] ==
+            "Not a valid integer."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=record.number))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'number')[0].startswith("Record with")
+        )
+        assert (
+            repr(record.number) in exception._excinfo[1].messages.get(
+                'number')[0]
+        )
+        assert (
+            "already exists." in exception._excinfo[1].messages.get(
+                'number')[0]
+        )
+
+    def test_unique_field_list_other_types(self, registry_field_unique):
+        registry = registry_field_unique
+        existing_uuids = []
+        for i in range(1, 3):
+            rec = registry.Records.insert(number=i*100)
+            existing_uuids.append(rec.uuid)
+
+        class TestSchema(Schema):
+            uuid = fields.UniqueField(
+                        cls_or_instance_type=fields.List(fields.UUID()),
+                        model='Model.Records', key='uuid')
+            number = fields.UniqueField(
+                        cls_or_instance_type=fields.List(fields.Int()),
+                        model='Model.Records', key='number')
+
+        sch = TestSchema(context={"registry": registry})
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(uuid=existing_uuids))
+
+        assert 'uuid' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'uuid')[0].startswith("Records with")
+        )
+        assert (
+            repr(existing_uuids) in exception._excinfo[1].messages.get(
+                'uuid')[0]
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(uuid=[existing_uuids[0], 666]))
+
+        assert 'uuid' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('uuid')[1][0] ==
+            "Not a valid UUID."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=[100, 200]))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'number')[0].startswith("Records with")
+        )
+        assert (
+            repr([100, 200]) in exception._excinfo[1].messages.get('number')[0]
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=[100, 666]))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get(
+                'number')[0].startswith("Records with")
+        )
+        assert (
+            repr([100]) in exception._excinfo[1].messages.get('number')[0]
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=["NAN", 666]))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('number')[0][0] ==
+            "Not a valid integer."
+        )
+
+    def test_unique_field_no_records(self, registry_field_unique):
+        registry = registry_field_unique
+        for i in range(2):
+            registry.Records.insert(code="code%s" % i, number=i)
+
+        class TestSchema(Schema):
+            code = fields.UniqueField(
+                        cls_or_instance_type=fields.Str(),
+                        model='Model.Records', key='code')
+            number = fields.UniqueField(
+                        cls_or_instance_type=fields.List(fields.Int()),
+                        model='Model.Records', key='number')
+
+        sch = TestSchema(context={"registry": registry})
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=None))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('code')[0] ==
+            "Field may not be null."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code=""))
+
+        assert 'code' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('code')[0] ==
+            "Field may not be null."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=[None]))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+           exception._excinfo[1].messages.get('number')[0][0] ==
+           "Field may not be null."
+        )
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(number=[""]))
+
+        assert 'number' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('number')[0][0] ==
+            "Not a valid integer."
+        )
+
+    def test_unique_field_required(self, registry_field_unique):
+        registry = registry_field_unique
+
+        class TestSchema(Schema):
+            email = fields.UniqueField(
+                        cls_or_instance_type=fields.Str(),
+                        model='Model.Records', key='email', required=True)
+            code = fields.Str()
+
+        sch = TestSchema(context={"registry": registry})
+
+        with pytest.raises(ValidationError) as exception:
+            sch.load(dict(code="new_code"))
+
+        assert 'email' in exception._excinfo[1].messages.keys()
+        assert (
+            exception._excinfo[1].messages.get('email')[0] ==
+            "Missing data for required field."
+        )
+
+
 def add_field_url():
 
     @Declarations.register(Declarations.Model)

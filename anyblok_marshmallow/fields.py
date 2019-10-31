@@ -229,11 +229,13 @@ class Country(String):
         return
 
 
-class InstanceField(Field):
-    """Verify database record(s) exist for given model, column and value.
+class Mixin(Field):
 
-    :param str model: The database model to query
-    :param key: The database column to query for `value`.
+    """This field should not be instanciated and is aimed at being a support
+       base for high level fields wrapping simpler ones
+
+       :param str model: The database model to query
+       :param key: The database column to query for `value`.
     """
 
     def __init__(self, cls_or_instance_type=String, model=None,
@@ -254,10 +256,10 @@ class InstanceField(Field):
                                  'marshmallow.base.FieldABC')
             self.container = cls_or_instance_type
 
-        super(InstanceField, self).__init__(*args, **kwargs)
+        super(Mixin, self).__init__(*args, **kwargs)
 
     def _add_to_schema(self, field_name, schema):
-        super(InstanceField, self)._add_to_schema(field_name, schema)
+        super(Mixin, self)._add_to_schema(field_name, schema)
         self.container.parent = self
         self.container.name = field_name
 
@@ -266,6 +268,17 @@ class InstanceField(Field):
 
     def _deserialize(self, value, attr, data, **kwargs):
         return self.container.deserialize(value, attr=attr, data=data)
+
+    def _validate(self, value):
+        pass
+
+
+class InstanceField(Mixin):
+    """Verify database record(s) exist for given model, column and value.
+
+    :param str model: The database model to query
+    :param key: The database column to query for `value`.
+    """
 
     def _validate(self, value):
         registry = self.context['registry']
@@ -294,6 +307,40 @@ class InstanceField(Field):
             if not record:
                 raise ValidationError(
                         "Record with key %r = %r on %r not found" %
+                        (self.key, value, Model))
+
+
+class UniqueField(Mixin):
+
+    """Adds schema validation for ensuring uncity of a considered field on the
+       considered model.
+
+    :param str model: The database model to query
+    :param key: The database column to query for `value`.
+    """
+
+    def _validate(self, value):
+        registry = self.context['registry']
+        Model = registry.get(self.model)
+
+        if not value:
+            raise ValidationError("Field may not be null.")
+
+        if isinstance(self.container, List):
+            invalid = Model.query(self.key).filter(
+                        getattr(Model, self.key).in_(
+                            [v for v in value if v])).all()
+            invalid_list = [v[0] for v in invalid]
+
+            if invalid_list:
+                raise ValidationError(
+                    "Records with key %r = %r on %r already exists." %
+                    (self.key, invalid_list, Model))
+        else:
+            record = Model.query().filter_by(**{self.key: value}).one_or_none()
+            if record:
+                raise ValidationError(
+                        "Record with key %r = %r on %r already exists." %
                         (self.key, value, Model))
 
 
