@@ -210,16 +210,61 @@ class PhoneNumber(String):
 
 class Country(String):
 
+    ALLOWED_MODES = ("alpha_3", "alpha_2", "name", "numeric", "official_name")
+
+    def __init__(
+            self, mode=None, load_mode='alpha_3', dump_mode='alpha_3', *args,
+            **kwargs
+            ):
+
+        self.load_mode = mode or load_mode
+        self.dump_mode = mode or dump_mode
+
+        if (self.load_mode not in Country.ALLOWED_MODES or
+                self.dump_mode not in Country.ALLOWED_MODES):
+            raise ValueError(
+                    ("Provided modes do not match authorized values. Must be "
+                     "one of '%r'." % (Country.ALLOWED_MODES,))
+                    )
+
+        super(Country, self).__init__(*args, **kwargs)
+
     def _serialize(self, value, attr, obj):
+
         if value is not None and not isinstance(value, str):
-            return value.alpha_3
+
+            if self.dump_mode == 'alpha_3':
+                return value.alpha_3
+            elif self.dump_mode == 'alpha_2':
+                return value.alpha_2
+            elif self.dump_mode == 'numeric':
+                return value.numeric
+            elif self.dump_mode == 'name':
+                return value.name
+            elif self.dump_mode == 'official_name':
+                return value.official_name
 
         return value
 
     def _deserialize(self, value, attr, data, **kwargs):
+
         if value is not None:
+
             import pycountry
-            value = pycountry.countries.get(alpha_3=value)
+
+            if self.load_mode == 'alpha_3':
+                value = pycountry.countries.get(alpha_3=value)
+            elif self.load_mode == 'alpha_2':
+                value = pycountry.countries.get(alpha_2=value)
+            elif self.load_mode == 'numeric':
+                value = pycountry.countries.get(numeric=value)
+            elif self.load_mode == 'name':
+                value = pycountry.countries.get(name=value)
+            elif self.load_mode == 'official_name':
+                value = pycountry.countries.get(official_name=value)
+            else:
+                value = None
+
             if value is None:
                 raise ValidationError('Not a valid country.')
 
