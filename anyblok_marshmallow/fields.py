@@ -232,19 +232,7 @@ class Country(String):
     def _serialize(self, value, attr, obj):
 
         if value is not None and not isinstance(value, str):
-
-            if self.dump_mode == 'alpha_3':
-                return value.alpha_3
-            elif self.dump_mode == 'alpha_2':
-                return value.alpha_2
-            elif self.dump_mode == 'numeric':
-                return value.numeric
-            elif self.dump_mode == 'name':
-                return value.name
-            elif self.dump_mode == 'official_name':
-                return value.official_name
-
-        return value
+            return getattr(value, self.dump_mode) or value
 
     def _deserialize(self, value, attr, data, **kwargs):
 
