@@ -1582,7 +1582,6 @@ class TestFieldCountry:
         class ExampleCountrySchema(Schema):
             country = fields.Country(mode=fields.Country.Modes.ALPHA_2)
 
-
         sch = ExampleCountrySchema()
 
         country = sch.load(dict(country='FR'))
@@ -1605,7 +1604,6 @@ class TestFieldCountry:
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
             country = fields.Country(mode=fields.Country.Modes.NUMERIC)
-
 
         sch = ExampleCountrySchema()
 
@@ -1630,7 +1628,6 @@ class TestFieldCountry:
         class ExampleCountrySchema(Schema):
             country = fields.Country(mode=fields.Country.Modes.NAME)
 
-
         sch = ExampleCountrySchema()
 
         country = sch.load(dict(country='France'))
@@ -1653,7 +1650,6 @@ class TestFieldCountry:
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
             country = fields.Country(mode=fields.Country.Modes.OFFICIAL_NAME)
-
 
         sch = ExampleCountrySchema()
 
@@ -1694,7 +1690,6 @@ class TestFieldCountry:
                     dump_mode=fields.Country.Modes.ALPHA_2
                     )
 
-
         sch = ExampleCountrySchema()
 
         country = sch.load(dict(country='FRA'))
@@ -1704,6 +1699,7 @@ class TestFieldCountry:
         assert country == {
                 'country': 'FR'
                 }
+
 
 def add_field_color():
 
