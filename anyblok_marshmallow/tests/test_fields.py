@@ -1580,7 +1580,7 @@ class TestFieldCountry:
 
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
-            country = fields.Country(mode='alpha_2')
+            country = fields.Country(mode=fields.Country.Modes.ALPHA_2)
 
 
         sch = ExampleCountrySchema()
@@ -1604,7 +1604,7 @@ class TestFieldCountry:
 
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
-            country = fields.Country(mode="numeric")
+            country = fields.Country(mode=fields.Country.Modes.NUMERIC)
 
 
         sch = ExampleCountrySchema()
@@ -1628,7 +1628,7 @@ class TestFieldCountry:
 
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
-            country = fields.Country(mode="name")
+            country = fields.Country(mode=fields.Country.Modes.NAME)
 
 
         sch = ExampleCountrySchema()
@@ -1652,7 +1652,7 @@ class TestFieldCountry:
 
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
-            country = fields.Country(mode="official_name")
+            country = fields.Country(mode=fields.Country.Modes.OFFICIAL_NAME)
 
 
         sch = ExampleCountrySchema()
@@ -1679,13 +1679,20 @@ class TestFieldCountry:
             class ExampleCountrySchema(Schema):
                 country = fields.Country(mode="not_a_valid_mode")
 
-        assert str(fields.Country.ALLOWED_MODES) in str(exception.value)
+        assert str(
+                list(
+                    fields.Country.Modes.__members__.keys()
+                    )
+                ) in str(exception.value)
 
     def test_country_different_load_and_dump_mode(self):
 
         # Define some schema to test Country Field configuration
         class ExampleCountrySchema(Schema):
-            country = fields.Country(load_mode="alpha_3", dump_mode="alpha_2")
+            country = fields.Country(
+                    load_mode=fields.Country.Modes.ALPHA_3,
+                    dump_mode=fields.Country.Modes.ALPHA_2
+                    )
 
 
         sch = ExampleCountrySchema()

@@ -10,6 +10,7 @@ from marshmallow.base import FieldABC
 from marshmallow.validate import OneOf
 from base64 import b64encode, b64decode
 from sqlalchemy_utils import PhoneNumber as PN
+from enum import Enum, unique
 from marshmallow.fields import (  # noqa
     Field,
     Raw,
@@ -210,21 +211,29 @@ class PhoneNumber(String):
 
 class Country(String):
 
-    ALLOWED_MODES = ("alpha_3", "alpha_2", "name", "numeric", "official_name")
+    @unique
+    class Modes(Enum):
+        ALPHA_3 = 'alpha_3'
+        ALPHA_2 = 'alpha_2'
+        NUMERIC = 'numeric'
+        NAME = 'name'
+        OFFICIAL_NAME = 'official_name'
 
     def __init__(
-            self, mode=None, load_mode='alpha_3', dump_mode='alpha_3', *args,
-            **kwargs
+            self, mode=None, load_mode=Modes.ALPHA_3, dump_mode=Modes.ALPHA_3,
+            *args, **kwargs
             ):
 
         self.load_mode = mode or load_mode
         self.dump_mode = mode or dump_mode
 
-        if (self.load_mode not in Country.ALLOWED_MODES or
-                self.dump_mode not in Country.ALLOWED_MODES):
+        if (self.load_mode not in Country.Modes.__members__.values() or
+                self.dump_mode not in Country.Modes.__members__.values()):
             raise ValueError(
                     ("Provided modes do not match authorized values. Must be "
-                     "one of '%r'." % (Country.ALLOWED_MODES,))
+                     "one of '%r'." % list(
+                         Country.Modes.__members__.keys())
+                     )
                     )
 
         super(Country, self).__init__(*args, **kwargs)
@@ -232,7 +241,7 @@ class Country(String):
     def _serialize(self, value, attr, obj):
 
         if value is not None and not isinstance(value, str):
-            return getattr(value, self.dump_mode) or value
+            return getattr(value, self.dump_mode.value) or value
 
     def _deserialize(self, value, attr, data, **kwargs):
 
@@ -240,15 +249,15 @@ class Country(String):
 
             import pycountry
 
-            if self.load_mode == 'alpha_3':
+            if self.load_mode == Country.Modes.ALPHA_3:
                 value = pycountry.countries.get(alpha_3=value)
-            elif self.load_mode == 'alpha_2':
+            elif self.load_mode == Country.Modes.ALPHA_2:
                 value = pycountry.countries.get(alpha_2=value)
-            elif self.load_mode == 'numeric':
+            elif self.load_mode == Country.Modes.NUMERIC:
                 value = pycountry.countries.get(numeric=value)
-            elif self.load_mode == 'name':
+            elif self.load_mode == Country.Modes.NAME:
                 value = pycountry.countries.get(name=value)
-            elif self.load_mode == 'official_name':
+            elif self.load_mode == Country.Modes.OFFICIAL_NAME:
                 value = pycountry.countries.get(official_name=value)
             else:
                 value = None
